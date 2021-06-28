@@ -1,0 +1,10 @@
+-- All restaurants must have at least 1 dish
+CREATE ASSERTION hasDish
+CHECK (
+    NOT EXISTS (
+        SELECT Rid FROM Restaurant
+        WHERE Rid NOT IN (
+            SELECT Rid FROM Dish
+        )
+    )
+);

@@ -1,0 +1,153 @@
+DROP DATABASE IF EXISTS INFS7901;
+CREATE DATABASE INFS7901;
+USE INFS7901;
+CREATE TABLE CustomerLogin(
+    Email VARCHAR(50) PRIMARY KEY NOT NULL,
+    Username CHAR(20) NOT NULL,
+    Pass CHAR(20) NOT NULL
+);
+CREATE TABLE CustomerDetails(
+    Email VARCHAR(50) NOT NULL,
+    Pass CHAR(20) NOT NULL,
+    FirstName CHAR(20),
+    LastName CHAR(20),
+    Mobile INTEGER,
+    Address CHAR(50),
+    PRIMARY KEY(Email, Pass)
+);
+CREATE TABLE Customer(
+    Cid INTEGER PRIMARY KEY NOT NULL,
+    Email VARCHAR(50) NOT NULL
+);
+CREATE TABLE RestaurantAddress(
+    Name CHAR(30),
+    Mobile INTEGER,
+    Address CHAR(90),
+    PRIMARY KEY(Name, Mobile)
+);
+CREATE TABLE Restaurant(
+    Rid INTEGER PRIMARY KEY NOT NULL,
+    Name CHAR(30),
+    Mobile INTEGER,
+    Type CHAR(20)
+);
+CREATE TABLE Orders(
+    Oid INTEGER PRIMARY KEY NOT NULL,
+    Cid INTEGER,
+    Rid INTEGER,
+    OrderTime DATETIME,
+    CompletionTime DATETIME,
+    OrderStatus CHAR(10),
+    PaymentType CHAR(10),
+    PaymentTime DATETIME,
+    T1 BIT(1)
+);
+CREATE TABLE Dish(
+    Rid INTEGER,
+    Name VARCHAR(20) NOT NULL,
+    Price INTEGER,
+    GlutenFree BIT(1),
+    Vegan BIT(1),
+    ExtraInfo VARCHAR(100),
+    PRIMARY KEY(Rid, Name)
+);
+CREATE TABLE Fr(
+    Oid INTEGER,
+    Rid INTEGER,
+    Name VARCHAR(20)
+);
+ALTER TABLE CustomerLogin ADD CONSTRAINT FOREIGN KEY (Email, Pass) REFERENCES CustomerDetails(Email, Pass) ON DELETE CASCADE;
+ALTER TABLE Customer ADD CONSTRAINT FOREIGN KEY (Email) REFERENCES CustomerLogin(Email) ON DELETE CASCADE;
+ALTER TABLE Restaurant ADD CONSTRAINT FOREIGN KEY (Name, Mobile) REFERENCES RestaurantAddress(Name,Mobile) ON DELETE CASCADE;
+ALTER TABLE Orders ADD CONSTRAINT FOREIGN KEY (Cid) REFERENCES Customer(Cid) ON DELETE SET NULL;
+ALTER TABLE Orders ADD CONSTRAINT FOREIGN KEY (Rid) REFERENCES Restaurant(Rid) ON DELETE CASCADE;
+ALTER TABLE Dish ADD CONSTRAINT FOREIGN KEY (Rid) REFERENCES Restaurant(Rid) ON DELETE CASCADE;
+ALTER TABLE Fr ADD CONSTRAINT FOREIGN KEY (Oid) REFERENCES Orders(Oid) ON DELETE CASCADE;
+ALTER TABLE Fr ADD CONSTRAINT FOREIGN KEY (Rid, Name) REFERENCES Dish(Rid, Name) ON DELETE CASCADE;
+DELIMITER $$
+CREATE TRIGGER `nonnegPriceInsert` BEFORE INSERT
+ON `Dish` FOR EACH ROW
+IF NEW.Price < 0 THEN
+    SET NEW.Price = 0;
+END IF
+$$
+CREATE TRIGGER `nonnegPriceUpdate` BEFORE UPDATE
+ON `Dish` FOR EACH ROW
+IF NEW.Price < 0 THEN
+    SET NEW.Price = 0;
+END IF
+$$
+DELIMITER ;
+CREATE VIEW CustomerInfo AS
+SELECT Cid, Username, CustomerDetails.*
+FROM Customer, CustomerLogin, CustomerDetails
+WHERE Customer.Email = CustomerLogin.Email
+AND CustomerLogin.Email = CustomerDetails.Email AND CustomerLogin.Pass = CustomerLogin.Pass;
+CREATE VIEW RestaurantInfo AS
+SELECT Rid, Type, RestaurantAddress.*
+FROM Restaurant, RestaurantAddress
+WHERE Restaurant.Name = RestaurantAddress.Name AND Restaurant.Mobile = RestaurantAddress.Mobile;
+CREATE VIEW orders_rest AS
+SELECT o.Cid, r.Rid
+FROM Restaurant AS r
+    INNER JOIN Orders AS o
+    ON r.Rid = o.Rid;
+INSERT INTO CustomerDetails (Email, Pass, Address, FirstName, LastName, Mobile) VALUES
+("bill@gmail.com", "aaaa", "1 Street st", "Bill", "Smith", 0412345678),
+("bob@hotmail.com", "bbbb", "58 Main rd", "Bob", "Smith", 0423456789),
+("jane@gmail.com", "password", "125 Road ct", "Jane", "Austen", 52348694),
+("jo@gmail.com", "pass", "529 Big rd", "Johanna", "Williams", 0487654321),
+("phil@gmail.com", "p", "928 Road rd", "Phil", "Winters", 0456784321);
+INSERT INTO CustomerLogin (Email, Pass, Username) VALUES
+("bill@gmail.com", "aaaa", "billy"),
+("bob@hotmail.com", "bbbb", "bobby"),
+("jane@gmail.com", "password", "jane"),
+("jo@gmail.com", "pass", "jojo"),
+("phil@gmail.com", "p", "phillys");
+INSERT INTO Customer (Cid, Email) VALUES
+(1, "bill@gmail.com"),
+(2, "bob@hotmail.com"),
+(3, "jane@gmail.com"),
+(4, "jo@gmail.com"),
+(5, "phil@gmail.com");
+INSERT INTO RestaurantAddress (Mobile, Name, Address) VALUES
+(0411111111, "Big Restaurant", "999 Big rd"),
+(0422222222, "Small Restaurant", "1 Small st"),
+(0433333333, "Restaurant", "12 Restaurant rd"),
+(0444444444, "Bad Restaurant", "57 Street st"),
+(0455555555, "Could be better Restaurant", "203 Alright st");
+INSERT INTO Restaurant (Rid, Name, Mobile, Type) VALUES
+(1, "Big Restaurant", 0411111111, "Fine Dining"),
+(2, "Small Restaurant", 0422222222, "Bistro"),
+(3, "Restaurant", 0433333333, "Family Diner"),
+(4, "Bad Restaurant", 0444444444, "Bistro"),
+(5, "Could be better Restaurant", 0455555555, "Fast food");
+INSERT INTO Dish (Rid, Name, Price, GlutenFree, Vegan, ExtraInfo) VALUES
+(1, "Garlic Bread", 500, 0, 1, "Dairy Free Butter"),
+(1, "300g Rump", 2500, 1, 0, NULL),
+(2, "Pasta", 1500, 0, 0, NULL),
+(3, "Burger", 800, 0, 0, NULL),
+(4, "Bread", 500, 0, 1, "Literally just a slice of bread"),
+(5, "Small Chips", 200, 0, 1, NULL);
+INSERT INTO Orders (Oid, Cid, Rid, OrderTime, OrderStatus, PaymentTime, PaymentType, CompletionTime, T1) VALUES
+(1, 1, 1, "2012-06-18 10:34:09", "Complete", "2012-06-18 10:35:09", "EFTPOS", "2012-06-18 10:44:09", 0),
+(2, 1, 1, "2012-06-28 10:34:09", "Complete", "2012-06-28 10:35:09", "EFTPOS", "2012-06-28 10:44:09", 1),
+(3, 1, 2, "2014-06-28 10:34:09", "Complete", "2014-06-28 10:35:09", "EFTPOS", "2014-06-28 10:44:09", 1),
+(4, 1, 3, "2015-06-28 10:34:09", "Complete", "2015-06-28 10:35:09", "EFTPOS", "2015-06-28 10:44:09", 1),
+(5, 1, 4, "2016-06-28 10:34:09", "Complete", "2016-06-28 10:35:09", "EFTPOS", "2016-06-28 10:44:09", 1),
+(6, 1, 5, "2017-06-28 10:34:09", "Complete", "2017-06-28 10:35:09", "EFTPOS", "2017-06-28 10:44:09", 1),
+(7, 2, 2, "2021-04-18 10:34:09", "In Transit", "2021-04-18 10:35:06", "EFTPOS", NULL, 1),
+(8, 3, 3, "2021-04-18 10:35:19", "Ready", "2021-04-18 10:35:59", "EFTPOS", NULL, 0),
+(9, 4, 5, "2021-04-18 10:34:09", "In Transit", NULL, "Cash", NULL, 1);
+INSERT INTO Fr (Oid, Rid, Name) VALUES
+(1, 1, "Garlic Bread"),
+(1, 1, "Garlic Bread"),
+(1, 1, "300g Rump"),
+(2, 1, "Garlic Bread"),
+(3, 2, "Pasta"),
+(4, 3, "Burger"),
+(5, 4, "Bread"),
+(6, 5, "Small Chips"),
+(7, 2, "Pasta"),
+(8, 3, "Burger"),
+(9, 5, "Small Chips");
