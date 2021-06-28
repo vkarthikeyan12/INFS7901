@@ -1,3 +1,3 @@
 # INFS7901
 
-Created a food management system using **SQL** and PHP
+Created a food management system using **SQL** and **PHP**
